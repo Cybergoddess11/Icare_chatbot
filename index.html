@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icare</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light grey background for the page */
+        }
+        .chat-container {
+            max-width: 600px;
+            height: 80vh; /* Fixed height for the chat window */
+            max-height: 700px;
+            display: flex;
+            flex-direction: column;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .chat-header {
+            background-color: #1a1a1a; /* Dark charcoal black */
+            color: white;
+            padding: 1rem;
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+            font-weight: 700;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background-color: #ffffff; /* White background for messages area */
+            scroll-behavior: smooth;
+        }
+        .message {
+            display: flex;
+            margin-bottom: 0.75rem;
+        }
+        .message.user {
+            justify-content: flex-end;
+        }
+        .message.bot {
+            justify-content: flex-start;
+        }
+        .message-bubble {
+            max-width: 75%;
+            padding: 0.75rem 1rem;
+            border-radius: 1.25rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        .user .message-bubble {
+            background-color: #FFEA00; /* Vibrant yellow */
+            color: #1a1a1a; /* Dark charcoal black */
+            border-bottom-right-radius: 0.25rem;
+        }
+        .bot .message-bubble {
+            background-color: #fff7a0; /* Lighter yellow */
+            color: #000000; /* Pure black */
+            border-bottom-left-radius: 0.25rem;
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 1rem;
+            border-top: 1px solid #e5e7eb;
+            background-color: #f9fafb; /* Light grey for input area */
+            border-bottom-left-radius: 1rem;
+            border-bottom-right-radius: 1rem;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            gap: 0.5rem; /* Space between buttons and input */
+        }
+        .chat-input {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 1.5rem;
+            border: 1px solid #d1d5db;
+            outline: none;
+            transition: border-color 0.2s ease-in-out;
+            font-size: 1rem;
+            min-width: 150px; /* Ensure input doesn't get too small */
+        }
+        .chat-input:focus {
+            border-color: #1a1a1a; /* Dark charcoal black on focus */
+            box-shadow: 0 0 0 2px rgba(26, 26, 26, 0.2);
+        }
+        .send-button, .action-button {
+            padding: 0.75rem 1.5rem;
+            background-color: #1a1a1a; /* Dark charcoal black */
+            color: white;
+            border-radius: 1.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            font-weight: 600;
+            white-space: nowrap; /* Prevent button text from wrapping */
+        }
+        .send-button:hover, .action-button:hover {
+            background-color: #000000; /* Pure black on hover */
+        }
+        .send-button:disabled, .action-button:disabled {
+            background-color: #555555; /* Medium dark grey when disabled */
+            cursor: not-allowed;
+        }
+        /* Responsive adjustments for buttons */
+        @media (max-width: 640px) {
+            .chat-input-area {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .send-button, .action-button {
+                margin-left: 0;
+                width: 100%;
+            }
+            .chat-input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="chat-container w-full">
+        <div class="chat-header text-center text-2xl">
+            Icare - Your Mental Wellness Companion
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <!-- Initial bot message -->
+            <div class="message bot">
+                <div class="message-bubble">Hello! I'm Icare. I'm here to listen if you need to talk, or just want a little encouragement. How are you feeling today?</div>
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="user-input" class="chat-input" placeholder="Share what's on your mind..." autocomplete="off">
+            <button id="send-button" class="send-button">Send</button>
+            <button id="affirmation-button" class="action-button">✨ Get Affirmation</button>
+            <button id="reflection-button" class="action-button">✨ Reflection Prompt</button>
+        </div>
+    </div>
+
+    <script type="module">
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const affirmationButton = document.getElementById('affirmation-button');
+        const reflectionButton = document.getElementById('reflection-button');
+        const chatMessages = document.getElementById('chat-messages');
+
+        // Function to scroll to the bottom of the chat
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to add a message to the chat display
+        function addMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('message-bubble');
+            bubbleDiv.textContent = text;
+
+            messageDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // Function to disable/enable all interactive elements
+        function setInteractiveElementsEnabled(enabled) {
+            userInput.disabled = !enabled;
+            sendButton.disabled = !enabled;
+            affirmationButton.disabled = !enabled;
+            reflectionButton.disabled = !enabled;
+        }
+
+        // Simulating a knowledge base for the chatbot with mental wellness phrases
+        const knowledgeBase = {
+            "hello": "Hi there! I'm here for you. What's on your mind?",
+            "hi": "Hello! I'm here to listen. How can I help?",
+            "how are you": "As a bot, I don't have feelings, but I'm focused on helping you feel better.",
+            "i'm sad": "I hear that you're feeling sad. It's okay to feel this way. Remember, tough times don't last, but tough people do. I'm here to listen without judgment.",
+            "i feel down": "Feeling down can be really tough. Please know you're not alone. Sometimes just talking about it helps. Would you like to share more?",
+            "i'm stressed": "Stress can be overwhelming. Take a moment with me to breathe. Inhale slowly, hold for a bit, then exhale completely. You're doing great, one step at a time.",
+            "i'm anxious": "Anxiety can feel so consuming. It's important to acknowledge these feelings. Try focusing on your breath, or find something comforting in your surroundings. I'm here.",
+            "i need help": "It takes courage to ask for help. While I can offer support, if you're in a crisis, please reach out to a trusted adult, school counselor, or a mental health professional immediately. You can also find crisis hotlines online.",
+            "i'm not okay": "I'm really sorry to hear that you're not okay. Please remember that your feelings are valid. If you feel unsafe or need immediate support, please talk to someone you trust or a professional. I care about your well-being.",
+            "cheer me up": "I'm sending you some virtual sunshine! Remember your strength, your resilience, and all the good things that make you, *you*. You've got this!",
+            "i want to talk": "I'm ready to listen. There's no pressure to say anything in particular, just share what feels right for you.",
+            "i feel lonely": "Feeling lonely is a common human experience. It doesn't mean anything is wrong with you. It's okay to reach out. I'm here to keep you company too.",
+            "what should i do": "That's a big question, and often there's no single right answer. Can you tell me more about what's making you ask? We can explore it together.",
+            "thanks": "You're welcome! I'm glad I could be here for you.",
+            "thank you": "My pleasure! Remember, taking care of your mental well-being is important.",
+            "bye": "Take care! Remember I'm here anytime you need to talk.",
+            "goodbye": "Goodbye for now. Be kind to yourself, and know that you matter.",
+            "i'm tired": "It sounds like you might need some rest. Taking care of your body is a great way to support your mind. Maybe a short break or a nap could help?"
+        };
+
+        // Function to get a response from the chatbot (including Gemini API calls)
+        async function getBotResponse(userMessage, promptType = 'chat') {
+            setInteractiveElementsEnabled(false); // Disable input and buttons
+            
+            // Remove previous "Thinking..." messages if any
+            const existingThinkingMessages = chatMessages.querySelectorAll('.bot .message-bubble');
+            if (existingThinkingMessages.length > 0 && existingThinkingMessages[existingThinkingMessages.length - 1].textContent === 'Thinking...') {
+                 existingThinkingMessages[existingThinkingMessages.length - 1].parentNode.remove();
+            }
+
+            addMessage('bot', 'Thinking...'); // Show a loading indicator
+
+            let geminiPrompt;
+            if (promptType === 'affirmation') {
+                geminiPrompt = "Generate a short, positive, and encouraging affirmation for mental well-being, suitable for a student. Keep it concise.";
+            } else if (promptType === 'reflection') {
+                geminiPrompt = "Provide a thoughtful and gentle journaling or self-reflection prompt for a student to consider their feelings or experiences. Make it open-ended and supportive.";
+            } else { // 'chat' type
+                const lowerCaseMessage = userMessage.toLowerCase().trim();
+                if (knowledgeBase[lowerCaseMessage]) {
+                    // Remove "Thinking..." message if it's still there before adding the actual response
+                    const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
+                    if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
+                         thinkingMessage.parentNode.remove();
+                    }
+                    setInteractiveElementsEnabled(true); // Re-enable if using local knowledge base
+                    return knowledgeBase[lowerCaseMessage];
+                }
+                geminiPrompt = userMessage; // Use the user's message as the prompt for general chat
+            }
+
+            try {
+                const chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: geminiPrompt }] });
+
+                const payload = {
+                    contents: chatHistory
+                };
+
+                const apiKey = ""; // Canvas will automatically provide it at runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                // Implement exponential backoff for API calls
+                let retries = 0;
+                const maxRetries = 5;
+                let delay = 1000; // 1 second
+
+                while (retries < maxRetries) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            if (response.status === 429) {
+                                retries++;
+                                await new Promise(res => setTimeout(res, delay));
+                                delay *= 2;
+                                continue;
+                            } else {
+                                throw new Error(`API error: ${response.statusText}`);
+                            }
+                        }
+
+                        const result = await response.json();
+
+                        // Remove "Thinking..." message before displaying the actual response
+                        const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
+                        if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
+                             thinkingMessage.parentNode.remove();
+                        }
+
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            return result.candidates[0].content.parts[0].text;
+                        } else {
+                            return "I'm having a little trouble understanding. Could you please rephrase or tell me more?";
+                        }
+                    } catch (error) {
+                        console.error("Fetch error:", error);
+                        if (retries < maxRetries - 1) {
+                            retries++;
+                            await new Promise(res => setTimeout(res, delay));
+                            delay *= 2;
+                        } else {
+                            const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
+                            if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
+                                thinkingMessage.parentNode.remove();
+                            }
+                            return "Oops! It seems I'm having trouble connecting right now. Please try again in a bit.";
+                        }
+                    }
+                }
+                const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
+                if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
+                    thinkingMessage.parentNode.remove();
+                }
+                return "I'm currently unable to connect to my knowledge source. Please try again later.";
+            } catch (error) {
+                console.error("Error communicating with Gemini API:", error);
+                const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
+                if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
+                    thinkingMessage.parentNode.remove();
+                }
+                return "I'm having trouble connecting right now. Please try again in a moment.";
+            } finally {
+                setInteractiveElementsEnabled(true); // Re-enable interactive elements
+            }
+        }
+
+        // Event listener for sending a regular message
+        sendButton.addEventListener('click', async () => {
+            const message = userInput.value.trim();
+            if (message) {
+                addMessage('user', message);
+                userInput.value = '';
+                const botResponse = await getBotResponse(message, 'chat');
+                addMessage('bot', botResponse);
+            }
+        });
+
+        // Event listener for Get Affirmation button
+        affirmationButton.addEventListener('click', async () => {
+            addMessage('user', '✨ Get Affirmation'); // Show user action
+            const botResponse = await getBotResponse('', 'affirmation');
+            addMessage('bot', botResponse);
+        });
+
+        // Event listener for Reflection Prompt button
+        reflectionButton.addEventListener('click', async () => {
+            addMessage('user', '✨ Reflection Prompt'); // Show user action
+            const botResponse = await getBotResponse('', 'reflection');
+            addMessage('bot', botResponse);
+        });
+
+
+        // Event listener for pressing Enter key
+        userInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendButton.click(); // Simulate a click on the send button
+            }
+        });
+
+        // Initially scroll to bottom in case there are pre-existing messages
+        scrollToBottom();
+    </script>
+</body>
+</html>
