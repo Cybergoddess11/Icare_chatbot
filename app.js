@@ -18,21 +18,26 @@ const provider = new firebase.auth.GoogleAuthProvider();
 
 function App() {
     const [user, setUser] = useState(null);
-    const [isGuest, setIsGuest] = useState(false); // New state for guest mode!
+    const [isGuest, setIsGuest] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    // This is the new, more reliable way to check for a logged-in user.
+    // This listener runs when the app first loads, and any time the user signs in or out.
     useEffect(() => {
-        auth.getRedirectResult()
-            .then((result) => {
-                if (result.user) {
-                    setUser(result.user);
-                }
-                setLoading(false);
-            })
-            .catch((error) => {
-                console.error("Redirect result error:", error);
-                setLoading(false);
-            });
+        const unsubscribe = auth.onAuthStateChanged(user => {
+            if (user) {
+                // If Firebase finds a user, we set them in our state.
+                setUser(user);
+            } else {
+                // If not, we make sure the user state is empty.
+                setUser(null);
+            }
+            // We're done checking, so we can stop loading.
+            setLoading(false);
+        });
+
+        // This cleans up the listener when the component is no longer needed.
+        return () => unsubscribe();
     }, []);
 
     const handleSignIn = () => {
@@ -41,12 +46,10 @@ function App() {
 
     const handleSignOut = () => {
         auth.signOut().then(() => {
-            setUser(null);
-            setIsGuest(false); // Also exit guest mode on sign out
+            setIsGuest(false);
         });
     };
     
-    // This function sets guest mode to true
     const handleGuestSignIn = () => {
         setIsGuest(true);
     };
@@ -55,9 +58,7 @@ function App() {
         return <h1>Loading...</h1>;
     }
 
-    // New Logic: If the user is signed in OR they are a guest, show the chatbot.
     if (user || isGuest) {
-        // We check if the user exists to personalize the welcome message.
         const welcomeName = user ? user.displayName : "Guest";
         
         return (
@@ -68,7 +69,6 @@ function App() {
             </div>
         );
     } else {
-        // If they are not logged in and not a guest, show the login screen.
         return (
             <div>
                 <h1>Welcome to iCare</h1>
