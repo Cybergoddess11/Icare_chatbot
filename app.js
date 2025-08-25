@@ -21,22 +21,17 @@ function App() {
     const [isGuest, setIsGuest] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // This is the new, more reliable way to check for a logged-in user.
-    // This listener runs when the app first loads, and any time the user signs in or out.
     useEffect(() => {
+        console.log("Setting up auth listener..."); // Debug message 1
         const unsubscribe = auth.onAuthStateChanged(user => {
+            console.log("Auth state changed. User object:", user); // Debug message 2
             if (user) {
-                // If Firebase finds a user, we set them in our state.
                 setUser(user);
             } else {
-                // If not, we make sure the user state is empty.
                 setUser(null);
             }
-            // We're done checking, so we can stop loading.
             setLoading(false);
         });
-
-        // This cleans up the listener when the component is no longer needed.
         return () => unsubscribe();
     }, []);
 
@@ -53,6 +48,9 @@ function App() {
     const handleGuestSignIn = () => {
         setIsGuest(true);
     };
+
+    console.log("Component is rendering. Current user state:", user); // Debug message 3
+    console.log("Component is rendering. Current guest state:", isGuest); // Debug message 4
 
     if (loading) {
         return <h1>Loading...</h1>;
