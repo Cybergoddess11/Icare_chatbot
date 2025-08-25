@@ -1,7 +1,3 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDT1ZaAtFS85oKA3RGbdnGnOrWradGpXS0",
@@ -13,17 +9,17 @@ const firebaseConfig = {
   measurementId: "G-9GS28KMMXJ"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+// Initialize Firebase using the global 'firebase' object
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
 
 // --- This is our main React Component ---
 function App() {
 
     // This function will be called when the Sign In button is clicked
     const handleSignIn = () => {
-        signInWithPopup(auth, provider)
+        auth.signInWithPopup(provider)
             .then((result) => {
                 const user = result.user;
                 console.log("Signed in user:", user.displayName);
@@ -41,7 +37,7 @@ function App() {
         alert("The chatbot will go here!");
     };
 
-    // This is the HTML that our component will display on the screen
+    // The HTML that our component will display
     return (
         <div>
             <h1>Welcome to iCare</h1>
