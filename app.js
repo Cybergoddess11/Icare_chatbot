@@ -16,41 +16,43 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-// Create a new instance of the Google provider
 const provider = new GoogleAuthProvider();
 
-// --- Button Logic ---
+// --- This is our main React Component ---
+function App() {
 
-const signInBtn = document.getElementById('signInBtn');
-const guestBtn = document.getElementById('guestBtn');
+    // This function will be called when the Sign In button is clicked
+    const handleSignIn = () => {
+        signInWithPopup(auth, provider)
+            .then((result) => {
+                const user = result.user;
+                console.log("Signed in user:", user.displayName);
+                alert("Welcome, " + user.displayName + "!");
+            })
+            .catch((error) => {
+                console.error("Sign in error:", error);
+                alert("Error signing in: " + error.message);
+            });
+    };
 
-// Add a "click" event listener to the Sign In button
-signInBtn.addEventListener('click', () => {
-    // Start the sign-in process
-    signInWithPopup(auth, provider)
-        .then((result) => {
-            // This gives you a Google Access Token. You can use it to access the Google API.
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            const token = credential.accessToken;
-            // The signed-in user info.
-            const user = result.user;
-            
-            // Log the user's name to the console and show a welcome message
-            console.log("Signed in user:", user.displayName);
-            alert("Welcome, " + user.displayName + "!");
+    // This function will be called when the Guest button is clicked
+    const handleGuest = () => {
+        console.log("Use Bot as Guest button was clicked!");
+        alert("The chatbot will go here!");
+    };
 
-        }).catch((error) => {
-            // Handle Errors here.
-            const errorCode = error.code;
-            const errorMessage = error.message;
-            console.error("Sign in error:", errorCode, errorMessage);
-            alert("Error signing in: " + errorMessage);
-        });
-});
+    // This is the HTML that our component will display on the screen
+    return (
+        <div>
+            <h1>Welcome to iCare</h1>
+            <p>Sign in or continue as a guest.</p>
+            <button onClick={handleSignIn}>Sign In with Google</button>
+            <button onClick={handleGuest}>Use Bot as Guest</button>
+        </div>
+    );
+}
 
-// Add a "click" event listener to the Guest button
-guestBtn.addEventListener('click', () => {
-    console.log("Use Bot as Guest button was clicked!");
-    alert("Redirecting to the bot page...");
-    // For example: window.location.href = 'bot.html';
-});
+// --- This tells React to render our App component in the 'root' div ---
+const container = document.getElementById('root');
+const root = ReactDOM.createRoot(container);
+root.render(React.createElement(App));
