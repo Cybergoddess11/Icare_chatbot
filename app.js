@@ -1,5 +1,5 @@
-// This line imports the 'useState' hook from React, which is our app's "memory"
-const { useState } = React;
+// This line imports the 'useState' and 'useEffect' hooks from React
+const { useState, useEffect } = React;
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -19,28 +19,40 @@ const provider = new firebase.auth.GoogleAuthProvider();
 
 // --- This is our main React Component ---
 function App() {
-    // Here we create our state. 'user' will hold the user's info, or 'null' if they're logged out.
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    // This hook runs once when the component first loads to check for a redirect result
+    useEffect(() => {
+        auth.getRedirectResult()
+            .then((result) => {
+                if (result.user) {
+                    setUser(result.user);
+                }
+                setLoading(false);
+            })
+            .catch((error) => {
+                console.error("Redirect result error:", error);
+                setLoading(false);
+            });
+    }, []); // The empty array ensures this runs only once on page load
 
     const handleSignIn = () => {
-        auth.signInWithPopup(provider)
-            .then((result) => {
-                // Instead of just an alert, we now save the user to our state!
-                setUser(result.user);
-            })
-            .catch((error) => console.error("Sign in error:", error));
+        // We now use a redirect instead of a pop-up
+        auth.signInWithRedirect(provider);
     };
 
     const handleSignOut = () => {
         auth.signOut().then(() => {
-            // When the user signs out, we clear the user from our state.
             setUser(null);
         });
     };
 
-    // This is the new logic: check if 'user' exists in our state.
+    if (loading) {
+        return <div>Loading...</div>;
+    }
+
     if (user) {
-        // IF the user is logged in, show this chatbot screen:
         return (
             <div>
                 <h1>Welcome to the iCare Bot, {user.displayName}!</h1>
@@ -49,7 +61,6 @@ function App() {
             </div>
         );
     } else {
-        // ELSE, if the user is logged out, show this login screen:
         return (
             <div>
                 <h1>Welcome to iCare</h1>
