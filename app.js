@@ -1,5 +1,16 @@
 const { useState, useEffect } = React;
 
+// --- NEW: Import Firebase functions directly ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { 
+    getAuth, 
+    GoogleAuthProvider, 
+    signInWithRedirect, 
+    onAuthStateChanged,
+    signOut 
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDT1ZaAtFS85oKA3RGbdnGnOrWradGpXS0",
@@ -11,54 +22,20 @@ const firebaseConfig = {
   measurementId: "G-9GS28KMMXJ"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const provider = new firebase.auth.GoogleAuthProvider();
+// Initialize Firebase with the new syntax
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-// --- Chatbot Component ---
+
+// --- Chatbot Component (Stays the Same) ---
 function Chatbot() {
-    const [messages, setMessages] = useState([
-        { from: "bot", text: "Hello! How are you feeling today?" }
-    ]);
+    const [messages, setMessages] = useState([ { from: "bot", text: "Hello! How are you feeling today?" } ]);
     const [input, setInput] = useState("");
-
-    const handleSend = () => {
-        if (input.trim() === "") return;
-
-        const userMessage = { from: "user", text: input };
-        const newMessages = [...messages, userMessage];
-        setMessages(newMessages);
-        setInput("");
-
-        setTimeout(() => {
-            const botMessage = { from: "bot", text: "Thank you for sharing. Can you tell me more?" };
-            setMessages([...newMessages, botMessage]);
-        }, 1000);
-    };
-
-    return (
-        <div className="chat-container">
-            <div className="messages">
-                {messages.map((msg, index) => (
-                    <div key={index} className={`message ${msg.from}`}>
-                        {msg.text}
-                    </div>
-                ))}
-            </div>
-            <div className="input-area">
-                <input 
-                    type="text" 
-                    value={input} 
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Type your message..."
-                    onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                />
-                <button onClick={handleSend}>Send</button>
-            </div>
-        </div>
-    );
+    const handleSend = () => { if (input.trim() === "") return; const userMessage = { from: "user", text: input }; const newMessages = [...messages, userMessage]; setMessages(newMessages); setInput(""); setTimeout(() => { const botMessage = { from: "bot", text: "Thank you for sharing. Can you tell me more?" }; setMessages([...newMessages, botMessage]); }, 1000); };
+    return ( <div className="chat-container"> <div className="messages"> {messages.map((msg, index) => ( <div key={index} className={`message ${msg.from}`}> {msg.text} </div> ))} </div> <div className="input-area"> <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type your message..." onKeyPress={(e) => e.key === 'Enter' && handleSend()} /> <button onClick={handleSend}>Send</button> </div> </div> );
 }
+
 
 // --- Main App Component ---
 function App() {
@@ -67,36 +44,31 @@ function App() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(user => {
-            if (user) {
-                setUser(user);
-            } else {
-                setUser(null);
-            }
+        const unsubscribe = onAuthStateChanged(auth, user => {
+            setUser(user);
             setLoading(false);
         });
         return () => unsubscribe();
     }, []);
 
-    const handleSignIn = () => { auth.signInWithRedirect(provider); };
-    const handleSignOut = () => { auth.signOut().then(() => setIsGuest(false)); };
+    const handleSignIn = () => {
+        signInWithRedirect(auth, provider);
+    };
+
+    const handleSignOut = () => {
+        signOut(auth).then(() => {
+            setIsGuest(false);
+        });
+    };
+    
     const handleGuestSignIn = () => { setIsGuest(true); };
 
-    if (loading) {
-        return <div id="root"><h1>Loading...</h1></div>;
-    }
+    if (loading) { return <div id="root"><h1>Loading...</h1></div>; }
 
     if (user || isGuest) {
         return <Chatbot />;
     } else {
-        return (
-            <div id="root">
-                <h1>Welcome to iCare</h1>
-                <p>Sign in or continue as a guest.</p>
-                <button onClick={handleSignIn}>Sign In with Google</button>
-                <button onClick={handleGuestSignIn}>Sign In as Guest</button>
-            </div>
-        );
+        return ( <div id="root"> <h1>Welcome to iCare</h1> <p>Sign in or continue as a guest.</p> <button onClick={handleSignIn}>Sign In with Google</button> <button onClick={handleGuestSignIn}>Sign In as Guest</button> </div> );
     }
 }
 
