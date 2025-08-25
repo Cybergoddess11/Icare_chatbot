@@ -1,0 +1,48 @@
+body {
+    background-color: #121212; /* Dark background */
+    color: #FFFFFF; /* White text */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* A softer, modern font */
+    display: flex;
+    justify-content: center; /* Horizontally center */
+    align-items: center; /* Vertically center */
+    min-height: 100vh;
+    margin: 0;
+}
+
+#root {
+    text-align: center;
+    background-color: #1e1e1e; /* Slightly lighter background for the box */
+    padding: 40px 50px;
+    border-radius: 20px; /* Rounded corners for the container */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+h1 {
+    color: #FFDE59; /* Yellow title */
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+p {
+    color: #c0c0c0;
+    margin-bottom: 30px;
+}
+
+button {
+    background-color: #FFDE59; /* Yellow background */
+    color: #121212; /* Black text */
+    border: none;
+    padding: 15px 30px;
+    margin: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 50px; /* This makes the buttons bubble-shaped */
+    transition: all 0.2s ease; /* Smooth animation */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+button:hover {
+    transform: scale(1.05); /* Make the button slightly bigger on hover */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
