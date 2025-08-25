@@ -5,21 +5,24 @@ import { getFirestore, collection, query, getDocs } from 'firebase/firestore';
 
 // --- Firebase Configuration (Explicitly set for GitHub Pages deployment) ---
 // This configuration is for your Firebase project 'icare-mental-wellness-bot'.
-// The 'apiKey' here is for Firebase services (Auth, Firestore), NOT the Gemini API key.
-// The 'projectId' should match your Firebase Project ID.
+// You MUST fill in the placeholders below for your specific Firebase Web App.
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-  // Default values if __firebase_config is not provided (e.g., for local dev outside Canvas)
-  const firebaseConfig = {
-  apiKey: "AIzaSyDTlZaAtFFS85oKA3RGBdnOrWradgPXs",
+  // ACTION REQUIRED: Replace "YOUR_FIREBASE_WEB_APP_API_KEY_HERE" with your Firebase Web App's API Key.
+  // Find this in your Firebase Project Settings -> 'Your apps' section -> Web App config.
+  apiKey: "AIzaSyDTlZaAtFFS85oKA3RGBdnOrWradgPXs", // Your Firebase Web App API Key from console
   authDomain: "icare-mental-wellness-bot.firebaseapp.com",
-  projectId: "icare-mental-wellness-bot",
+  projectId: "icare-mental-wellness-bot", // Your Firebase Project ID
   storageBucket: "icare-mental-wellness-bot.appspot.com",
-  messagingSenderId: "1087754401209",
-  appId: "1:1087754401209:web:93ee57afb07d496036f268"
+  // ACTION REQUIRED: Replace "YOUR_MESSAGING_SENDER_ID_HERE" with your Firebase Web App's Messaging Sender ID.
+  // Find this in your Firebase Project Settings -> 'Your apps' section -> Web App config.
+  messagingSenderId: "1087754401209", // Your Firebase Messaging Sender ID from console
+  // ACTION REQUIRED: Replace "YOUR_FIREBASE_WEB_APP_ID_HERE" with your Firebase Web App's App ID.
+  // Find this in your Firebase Project Settings -> 'Your apps' section -> Web App config.
+  appId: "1:1087754401209:web:93ee57afb07d496036f268" // Your Firebase Web App App ID from console
 };
 
 // The appId variable used for Firestore path is your Firebase Project ID
-const appIdForFirestorePath = "icare-mental-wellness-bot";
+const appIdForFirestorePath = "icare-mental-wellness-bot"; // Your Firebase Project ID
 
 // The initialAuthToken is for Canvas environment, will be null on GitHub Pages
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -41,7 +44,7 @@ function App() {
 
     const chatMessagesRef = useRef(null); // Ref for scrolling chat
 
-    // Gemini API Key - THIS IS YOUR KEY for the Gemini AI model
+    // Gemini API Key - THIS IS YOUR KEY for the Gemini AI model (pre-filled)
     const GEMINI_API_KEY = "AIzaSyCW0ZP6a7s4vMV_9WXMU29nTFHuqLBGSYE"; 
     const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
 
