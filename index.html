@@ -1,348 +1,312 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Icare</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5; /* Light grey background for the page */
-        }
-        .chat-container {
-            max-width: 600px;
-            height: 80vh; /* Fixed height for the chat window */
-            max-height: 700px;
-            display: flex;
-            flex-direction: column;
-            border-radius: 1rem;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-        .chat-header {
-            background-color: #1a1a1a; /* Dark charcoal black */
-            color: white;
-            padding: 1rem;
-            border-top-left-radius: 1rem;
-            border-top-right-radius: 1rem;
-            font-weight: 700;
-        }
-        .chat-messages {
-            flex-grow: 1;
-            padding: 1rem;
-            overflow-y: auto;
-            background-color: #ffffff; /* White background for messages area */
-            scroll-behavior: smooth;
-        }
-        .message {
-            display: flex;
-            margin-bottom: 0.75rem;
-        }
-        .message.user {
-            justify-content: flex-end;
-        }
-        .message.bot {
-            justify-content: flex-start;
-        }
-        .message-bubble {
-            max-width: 75%;
-            padding: 0.75rem 1rem;
-            border-radius: 1.25rem;
-            line-height: 1.4;
-            word-wrap: break-word;
-        }
-        .user .message-bubble {
-            background-color: #FFEA00; /* Vibrant yellow */
-            color: #1a1a1a; /* Dark charcoal black */
-            border-bottom-right-radius: 0.25rem;
-        }
-        .bot .message-bubble {
-            background-color: #fff7a0; /* Lighter yellow */
-            color: #000000; /* Pure black */
-            border-bottom-left-radius: 0.25rem;
-        }
-        .chat-input-area {
-            display: flex;
-            padding: 1rem;
-            border-top: 1px solid #e5e7eb;
-            background-color: #f9fafb; /* Light grey for input area */
-            border-bottom-left-radius: 1rem;
-            border-bottom-right-radius: 1rem;
-            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
-            gap: 0.5rem; /* Space between buttons and input */
-        }
-        .chat-input {
-            flex-grow: 1;
-            padding: 0.75rem 1rem;
-            border-radius: 1.5rem;
-            border: 1px solid #d1d5db;
-            outline: none;
-            transition: border-color 0.2s ease-in-out;
-            font-size: 1rem;
-            min-width: 150px; /* Ensure input doesn't get too small */
-        }
-        .chat-input:focus {
-            border-color: #1a1a1a; /* Dark charcoal black on focus */
-            box-shadow: 0 0 0 2px rgba(26, 26, 26, 0.2);
-        }
-        .send-button, .action-button {
-            padding: 0.75rem 1.5rem;
-            background-color: #1a1a1a; /* Dark charcoal black */
-            color: white;
-            border-radius: 1.5rem;
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out;
-            font-weight: 600;
-            white-space: nowrap; /* Prevent button text from wrapping */
-        }
-        .send-button:hover, .action-button:hover {
-            background-color: #000000; /* Pure black on hover */
-        }
-        .send-button:disabled, .action-button:disabled {
-            background-color: #555555; /* Medium dark grey when disabled */
-            cursor: not-allowed;
-        }
-        /* Responsive adjustments for buttons */
-        @media (max-width: 640px) {
-            .chat-input-area {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .send-button, .action-button {
-                margin-left: 0;
-                width: 100%;
-            }
-            .chat-input {
-                width: 100%;
-            }
-        }
-    </style>
-</head>
-<body class="flex items-center justify-center min-h-screen">
-    <div class="chat-container w-full">
-        <div class="chat-header text-center text-2xl">
-            Icare - Your Mental Wellness Companion
-        </div>
-        <div id="chat-messages" class="chat-messages">
-            <!-- Initial bot message -->
-            <div class="message bot">
-                <div class="message-bubble">Hello! I'm Icare. I'm here to listen if you need to talk, or just want a little encouragement. How are you feeling today?</div>
-            </div>
-        </div>
-        <div class="chat-input-area">
-            <input type="text" id="user-input" class="chat-input" placeholder="Share what's on your mind..." autocomplete="off">
-            <button id="send-button" class="send-button">Send</button>
-            <button id="affirmation-button" class="action-button">✨ Get Affirmation</button>
-            <button id="reflection-button" class="action-button">✨ Reflection Prompt</button>
-        </div>
-    </div>
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, query, getDocs } from 'firebase/firestore';
 
-    <script type="module">
-        const userInput = document.getElementById('user-input');
-        const sendButton = document.getElementById('send-button');
-        const affirmationButton = document.getElementById('affirmation-button');
-        const reflectionButton = document.getElementById('reflection-button');
-        const chatMessages = document.getElementById('chat-messages');
+// --- Firebase Configuration (Explicitly set for GitHub Pages deployment) ---
+// This configuration is for your Firebase project 'icare-mental-wellness-bot'.
+// The 'apiKey' here is for Firebase services (Auth, Firestore), NOT the Gemini API key.
+// The 'projectId' should match your Firebase Project ID.
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+  // Default values if __firebase_config is not provided (e.g., for local dev outside Canvas)
+  const firebaseConfig = {
+  apiKey: "AIzaSyDTlZaAtFFS85oKA3RGBdnOrWradgPXs",
+  authDomain: "icare-mental-wellness-bot.firebaseapp.com",
+  projectId: "icare-mental-wellness-bot",
+  storageBucket: "icare-mental-wellness-bot.appspot.com",
+  messagingSenderId: "1087754401209",
+  appId: "1:1087754401209:web:93ee57afb07d496036f268"
+};
 
-        // Function to scroll to the bottom of the chat
-        function scrollToBottom() {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
+// The appId variable used for Firestore path is your Firebase Project ID
+const appIdForFirestorePath = "icare-mental-wellness-bot";
 
-        // Function to add a message to the chat display
-        function addMessage(sender, text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', sender);
+// The initialAuthToken is for Canvas environment, will be null on GitHub Pages
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-            const bubbleDiv = document.createElement('div');
-            bubbleDiv.classList.add('message-bubble');
-            bubbleDiv.textContent = text;
+// Initialize Firebase outside the component to avoid re-initialization
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-            messageDiv.appendChild(bubbleDiv);
-            chatMessages.appendChild(messageDiv);
-            scrollToBottom();
-        }
+// --- Main App Component ---
+function App() {
+    const [messages, setMessages] = useState([]);
+    const [userInput, setUserInput] = useState('');
+    const [isLoading, setIsLoading] = useState(true); // Initial loading for auth & KB
+    const [isSending, setIsSending] = useState(false); // For when an AI response is being generated
+    const [authStatus, setAuthStatus] = useState('Connecting...');
+    const [userId, setUserId] = useState('anonymous');
+    const [knowledgeBaseData, setKnowledgeBaseData] = useState({});
 
-        // Function to disable/enable all interactive elements
-        function setInteractiveElementsEnabled(enabled) {
-            userInput.disabled = !enabled;
-            sendButton.disabled = !enabled;
-            affirmationButton.disabled = !enabled;
-            reflectionButton.disabled = !enabled;
-        }
+    const chatMessagesRef = useRef(null); // Ref for scrolling chat
 
-        // Simulating a knowledge base for the chatbot with mental wellness phrases
-        const knowledgeBase = {
-            "hello": "Hi there! I'm here for you. What's on your mind?",
-            "hi": "Hello! I'm here to listen. How can I help?",
-            "how are you": "As a bot, I don't have feelings, but I'm focused on helping you feel better.",
-            "i'm sad": "I hear that you're feeling sad. It's okay to feel this way. Remember, tough times don't last, but tough people do. I'm here to listen without judgment.",
-            "i feel down": "Feeling down can be really tough. Please know you're not alone. Sometimes just talking about it helps. Would you like to share more?",
-            "i'm stressed": "Stress can be overwhelming. Take a moment with me to breathe. Inhale slowly, hold for a bit, then exhale completely. You're doing great, one step at a time.",
-            "i'm anxious": "Anxiety can feel so consuming. It's important to acknowledge these feelings. Try focusing on your breath, or find something comforting in your surroundings. I'm here.",
-            "i need help": "It takes courage to ask for help. While I can offer support, if you're in a crisis, please reach out to a trusted adult, school counselor, or a mental health professional immediately. You can also find crisis hotlines online.",
-            "i'm not okay": "I'm really sorry to hear that you're not okay. Please remember that your feelings are valid. If you feel unsafe or need immediate support, please talk to someone you trust or a professional. I care about your well-being.",
-            "cheer me up": "I'm sending you some virtual sunshine! Remember your strength, your resilience, and all the good things that make you, *you*. You've got this!",
-            "i want to talk": "I'm ready to listen. There's no pressure to say anything in particular, just share what feels right for you.",
-            "i feel lonely": "Feeling lonely is a common human experience. It doesn't mean anything is wrong with you. It's okay to reach out. I'm here to keep you company too.",
-            "what should i do": "That's a big question, and often there's no single right answer. Can you tell me more about what's making you ask? We can explore it together.",
-            "thanks": "You're welcome! I'm glad I could be here for you.",
-            "thank you": "My pleasure! Remember, taking care of your mental well-being is important.",
-            "bye": "Take care! Remember I'm here anytime you need to talk.",
-            "goodbye": "Goodbye for now. Be kind to yourself, and know that you matter.",
-            "i'm tired": "It sounds like you might need some rest. Taking care of your body is a great way to support your mind. Maybe a short break or a nap could help?"
-        };
+    // Gemini API Key - THIS IS YOUR KEY for the Gemini AI model
+    const GEMINI_API_KEY = "AIzaSyCW0ZP6a7s4vMV_9WXMU29nTFHuqLBGSYE"; 
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
 
-        // Function to get a response from the chatbot (including Gemini API calls)
-        async function getBotResponse(userMessage, promptType = 'chat') {
-            setInteractiveElementsEnabled(false); // Disable input and buttons
-            
-            // Remove previous "Thinking..." messages if any
-            const existingThinkingMessages = chatMessages.querySelectorAll('.bot .message-bubble');
-            if (existingThinkingMessages.length > 0 && existingThinkingMessages[existingThinkingMessages.length - 1].textContent === 'Thinking...') {
-                 existingThinkingMessages[existingThinkingMessages.length - 1].parentNode.remove();
-            }
+    // --- Firebase Authentication and Knowledge Base Loading ---
+    useEffect(() => {
+        // Initial bot greeting
+        setMessages([
+            { sender: 'bot', text: "Hello! I'm Icare. I'm here to listen if you need to talk, or just want a little encouragement. How are you feeling today?" }
+        ]);
 
-            addMessage('bot', 'Thinking...'); // Show a loading indicator
-
-            let geminiPrompt;
-            if (promptType === 'affirmation') {
-                geminiPrompt = "Generate a short, positive, and encouraging affirmation for mental well-being, suitable for a student. Keep it concise.";
-            } else if (promptType === 'reflection') {
-                geminiPrompt = "Provide a thoughtful and gentle journaling or self-reflection prompt for a student to consider their feelings or experiences. Make it open-ended and supportive.";
-            } else { // 'chat' type
-                const lowerCaseMessage = userMessage.toLowerCase().trim();
-                if (knowledgeBase[lowerCaseMessage]) {
-                    // Remove "Thinking..." message if it's still there before adding the actual response
-                    const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
-                    if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
-                         thinkingMessage.parentNode.remove();
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            let currentUserId = 'anonymous';
+            if (user) {
+                currentUserId = user.uid;
+                setAuthStatus(`User ID: ${currentUserId.substring(0, 8)}...`);
+                console.log("User authenticated:", currentUserId);
+            } else {
+                setAuthStatus('Connecting...');
+                try {
+                    if (initialAuthToken) { // This will be null on GitHub Pages
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
                     }
-                    setInteractiveElementsEnabled(true); // Re-enable if using local knowledge base
-                    return knowledgeBase[lowerCaseMessage];
+                    currentUserId = auth.currentUser?.uid || crypto.randomUUID();
+                    setAuthStatus(`User ID: ${currentUserId.substring(0, 8)}...`);
+                    console.log("Anonymous user connected:", currentUserId);
+                } catch (error) {
+                    console.error("Firebase Auth error:", error);
+                    setAuthStatus(`Connection failed: ${error.message}`); // Display the specific error message
+                    setMessages(prev => [...prev, { sender: 'bot', text: `I'm having trouble connecting right now. Some features may be limited. Error: ${error.message}` }]);
+                    setIsLoading(false); // Stop loading, but disable interactions
+                    return;
                 }
-                geminiPrompt = userMessage; // Use the user's message as the prompt for general chat
             }
+            setUserId(currentUserId);
+            await loadKnowledgeBaseFromFirestore(currentUserId);
+            setIsLoading(false); // All initial loading done
+        });
 
-            try {
-                const chatHistory = [];
-                chatHistory.push({ role: "user", parts: [{ text: geminiPrompt }] });
+        return () => unsubscribe(); // Cleanup auth listener
+    }, []); // Run once on component mount
 
-                const payload = {
-                    contents: chatHistory
-                };
+    // Scroll to bottom whenever messages change
+    useEffect(() => {
+        if (chatMessagesRef.current) {
+            chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+        }
+    }, [messages]);
 
-                const apiKey = ""; // Canvas will automatically provide it at runtime
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+    const loadKnowledgeBaseFromFirestore = async (currentUserId) => {
+        setMessages(prev => [...prev, { sender: 'bot', text: 'Preparing my knowledge base...' }]);
+        let loadedKb = {};
+        try {
+            // Use appIdForFirestorePath (your Firebase Project ID) here
+            const knowledgeBaseRef = collection(db, `artifacts/${appIdForFirestorePath}/users/${currentUserId}/knowledgeBase`);
+            const q = query(knowledgeBaseRef);
+            const querySnapshot = await getDocs(q);
 
-                // Implement exponential backoff for API calls
-                let retries = 0;
-                const maxRetries = 5;
-                let delay = 1000; // 1 second
+            if (querySnapshot.empty) {
+                console.log("No custom knowledge base found for this user.");
+                setMessages(prev => [...prev, { sender: 'bot', text: "My custom knowledge base is empty. If you'd like me to learn specific answers, add them to my data!" }]);
+            } else {
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.question && data.answer) {
+                        loadedKb[data.question.toLowerCase().trim()] = data.answer;
+                    }
+                });
+                console.log(`Custom knowledge base loaded with ${Object.keys(loadedKb).length} entries.`);
+                setKnowledgeBaseData(loadedKb);
+            }
+        } catch (error) {
+            console.error("Error loading custom knowledge base from Firestore:", error);
+            setMessages(prev => [...prev, { sender: 'bot', text: `I'm having trouble accessing my custom knowledge. I'll rely on my general understanding for now.` }]);
+        } finally {
+            // Remove the "Preparing my knowledge base..." message if it's the last one
+            setMessages(prev => {
+                const lastMessage = prev[prev.length - 1];
+                if (lastMessage && lastMessage.sender === 'bot' && lastMessage.text.includes('Preparing my knowledge base...')) {
+                    return prev.slice(0, prev.length - 1); // Remove it
+                }
+                return prev;
+            });
+        }
+    };
 
-                while (retries < maxRetries) {
-                    try {
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
+    // --- Chatbot Logic (modified for Conversation Memory) ---
+    const getBotResponse = async (userMessage, promptType = 'chat') => {
+        setIsSending(true); // Disable input and buttons
+        setMessages(prev => [...prev, { sender: 'bot', text: 'Thinking...' }]); // Show thinking message
 
-                        if (!response.ok) {
-                            if (response.status === 429) {
-                                retries++;
-                                await new Promise(res => setTimeout(res, delay));
-                                delay *= 2;
-                                continue;
-                            } else {
-                                throw new Error(`API error: ${response.statusText}`);
-                            }
-                        }
+        let geminiPrompt;
+        let responseText = null;
 
-                        const result = await response.json();
+        // Construct chat history for Gemini to maintain context
+        // Only send the last few messages to keep the payload manageable
+        const conversationHistory = messages.slice(-5).map(msg => ({ // Last 5 messages
+            role: msg.sender === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.text }]
+        }));
 
-                        // Remove "Thinking..." message before displaying the actual response
-                        const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
-                        if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
-                             thinkingMessage.parentNode.remove();
-                        }
+        if (promptType === 'affirmation') {
+            geminiPrompt = "Generate a short, positive, and encouraging affirmation for mental well-being, suitable for a student. Keep it concise.";
+        } else if (promptType === 'reflection') {
+            geminiPrompt = "Provide a thoughtful and gentle journaling or self-reflection prompt for a student to consider their feelings or experiences. Make it open-ended and supportive.";
+        } else { // 'chat' type - check Firestore first
+            const lowerCaseMessage = userMessage.toLowerCase().trim();
 
-                        if (result.candidates && result.candidates.length > 0 &&
-                            result.candidates[0].content && result.candidates[0].content.parts &&
-                            result.candidates[0].content.parts.length > 0) {
-                            return result.candidates[0].content.parts[0].text;
-                        } else {
-                            return "I'm having a little trouble understanding. Could you please rephrase or tell me more?";
-                        }
-                    } catch (error) {
-                        console.error("Fetch error:", error);
-                        if (retries < maxRetries - 1) {
+            if (knowledgeBaseData[lowerCaseMessage]) {
+                responseText = knowledgeBaseData[lowerCaseMessage];
+            } else {
+                geminiPrompt = userMessage; // Fallback to Gemini for general chat
+            }
+        }
+
+        // If response found in Firestore, use it immediately
+        if (responseText) {
+            setMessages(prev => prev.slice(0, prev.length - 1)); // Remove 'Thinking...'
+            setIsSending(false);
+            return responseText;
+        }
+
+        // Otherwise, call Gemini API
+        try {
+            const payload = {
+                contents: [...conversationHistory, { role: 'user', parts: [{ text: geminiPrompt }] }]
+            };
+
+            let retries = 0;
+            const maxRetries = 5;
+            let delay = 1000;
+
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(GEMINI_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 429) {
                             retries++;
                             await new Promise(res => setTimeout(res, delay));
                             delay *= 2;
+                            continue;
                         } else {
-                            const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
-                            if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
-                                thinkingMessage.parentNode.remove();
-                            }
-                            return "Oops! It seems I'm having trouble connecting right now. Please try again in a bit.";
+                            throw new Error(`API error: ${response.statusText}`);
                         }
                     }
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        return "I'm having a little trouble understanding. Could you please rephrase or tell me more?";
+                    }
+                } catch (error) {
+                    console.error("Fetch error:", error);
+                    if (retries < maxRetries - 1) {
+                        retries++;
+                        await new Promise(res => setTimeout(res, delay));
+                        delay *= 2;
+                    } else {
+                        return "Oops! It seems I'm having trouble connecting to Gemini right now. Please try again in a bit.";
+                    }
                 }
-                const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
-                if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
-                    thinkingMessage.parentNode.remove();
-                }
-                return "I'm currently unable to connect to my knowledge source. Please try again later.";
-            } catch (error) {
-                console.error("Error communicating with Gemini API:", error);
-                const thinkingMessage = chatMessages.querySelector('.bot .message-bubble:last-child');
-                if (thinkingMessage && thinkingMessage.textContent === 'Thinking...') {
-                    thinkingMessage.parentNode.remove();
-                }
-                return "I'm having trouble connecting right now. Please try again in a moment.";
-            } finally {
-                setInteractiveElementsEnabled(true); // Re-enable interactive elements
             }
+            return "I'm currently unable to connect to my knowledge source. Please try again later.";
+        } catch (error) {
+            console.error("Error communicating with Gemini API:", error);
+            return "I'm having trouble connecting right now. Please try again in a moment.";
+        } finally {
+            setMessages(prev => prev.slice(0, prev.length - 1)); // Remove 'Thinking...' regardless of outcome
+            setIsSending(false); // Re-enable input and buttons
         }
+    };
 
-        // Event listener for sending a regular message
-        sendButton.addEventListener('click', async () => {
-            const message = userInput.value.trim();
-            if (message) {
-                addMessage('user', message);
-                userInput.value = '';
-                const botResponse = await getBotResponse(message, 'chat');
-                addMessage('bot', botResponse);
-            }
-        });
+    const handleSendMessage = async (messageText, type = 'chat') => {
+        if (!messageText.trim() && type === 'chat') return;
+        if (isLoading || isSending) return; // Prevent sending if still loading or sending
 
-        // Event listener for Get Affirmation button
-        affirmationButton.addEventListener('click', async () => {
-            addMessage('user', '✨ Get Affirmation'); // Show user action
-            const botResponse = await getBotResponse('', 'affirmation');
-            addMessage('bot', botResponse);
-        });
+        setMessages(prev => [...prev, { sender: 'user', text: messageText }]);
+        setUserInput(''); // Clear input after sending
 
-        // Event listener for Reflection Prompt button
-        reflectionButton.addEventListener('click', async () => {
-            addMessage('user', '✨ Reflection Prompt'); // Show user action
-            const botResponse = await getBotResponse('', 'reflection');
-            addMessage('bot', botResponse);
-        });
+        const botResponse = await getBotResponse(messageText, type);
+        setMessages(prev => [...prev, { sender: 'bot', text: botResponse }]);
+    };
 
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter' && userInput.trim() !== '') {
+            handleSendMessage(userInput);
+        }
+    };
 
-        // Event listener for pressing Enter key
-        userInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                sendButton.click(); // Simulate a click on the send button
-            }
-        });
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900"> {/* Page background */}
+            <div className="chat-container w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-lg flex flex-col overflow-hidden">
+                {/* Chat Header */}
+                <div className="chat-header bg-black text-white p-4 text-center text-2xl font-bold rounded-t-xl">
+                    Icare - Your Mental Wellness Companion
+                </div>
 
-        // Initially scroll to bottom in case there are pre-existing messages
-        scrollToBottom();
-    </script>
-</body>
-</html>
+                {/* Chat Messages Area */}
+                <div id="chat-messages" ref={chatMessagesRef} className="flex-1 p-4 overflow-y-auto bg-gray-50 dark:bg-gray-700">
+                    {messages.map((msg, index) => (
+                        <div key={index} className={`flex mb-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-base leading-snug ${
+                                msg.sender === 'user'
+                                    ? 'bg-yellow-400 text-black rounded-br-sm' // User message: vibrant yellow, black text
+                                    : 'bg-yellow-100 text-black rounded-bl-sm' // Bot message: lighter yellow, black text
+                            }`}>
+                                {msg.text}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Chat Input Area */}
+                <div className="p-4 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-2 rounded-b-xl">
+                    <input
+                        type="text"
+                        id="user-input"
+                        className="flex-grow p-3 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-black dark:text-white focus:outline-none focus:border-black focus:ring-2 focus:ring-black transition-all"
+                        placeholder="Share what's on your mind..."
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        disabled={isLoading || isSending}
+                    />
+                    <button
+                        id="send-button"
+                        className="px-6 py-3 bg-black text-white rounded-full font-semibold hover:bg-gray-800 transition-colors flex-shrink-0"
+                        onClick={() => handleSendMessage(userInput)}
+                        disabled={isLoading || isSending || !userInput.trim()}
+                    >
+                        Send
+                    </button>
+                    <button
+                        id="affirmation-button"
+                        className="px-6 py-3 bg-black text-white rounded-full font-semibold hover:bg-gray-800 transition-colors flex-shrink-0"
+                        onClick={() => handleSendMessage('✨ Get Affirmation', 'affirmation')}
+                        disabled={isLoading || isSending}
+                    >
+                        ✨ Get Affirmation
+                    </button>
+                    <button
+                        id="reflection-button"
+                        className="px-6 py-3 bg-black text-white rounded-full font-semibold hover:bg-gray-800 transition-colors flex-shrink-0"
+                        onClick={() => handleSendMessage('✨ Reflection Prompt', 'reflection')}
+                        disabled={isLoading || isSending}
+                    >
+                        ✨ Reflection Prompt
+                    </button>
+                    <div id="auth-status" className="w-full text-center text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        {authStatus}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default App;
