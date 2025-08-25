@@ -1,6 +1,6 @@
 const { useState, useEffect } = React;
 
-// --- Your Firebase Configuration and Initialization (Stays the Same) ---
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDT1ZaAtFS85oKA3RGbdnGnOrWradGpXS0",
   authDomain: "icare-mental-wellness-bot.firebaseapp.com",
@@ -10,10 +10,11 @@ const firebaseConfig = {
   appId: "1:1087754401209:web:93ee57afb07d496036f268",
   measurementId: "G-9GS28KMMXJ"
 };
+
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const provider = new firebase.auth.GoogleAuthProvider();
-
 
 // --- Chatbot Component ---
 function Chatbot() {
@@ -30,12 +31,10 @@ function Chatbot() {
         setMessages(newMessages);
         setInput("");
 
-        // --- NEW: Bot Reply Logic ---
-        // After 1 second, the bot will send a reply.
         setTimeout(() => {
             const botMessage = { from: "bot", text: "Thank you for sharing. Can you tell me more?" };
             setMessages([...newMessages, botMessage]);
-        }, 1000); // 1000 milliseconds = 1 second
+        }, 1000);
     };
 
     return (
@@ -61,8 +60,7 @@ function Chatbot() {
     );
 }
 
-
-// --- Main App Component (Stays the Same) ---
+// --- Main App Component ---
 function App() {
     const [user, setUser] = useState(null);
     const [isGuest, setIsGuest] = useState(false);
@@ -70,7 +68,11 @@ function App() {
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(user => {
-            setUser(user);
+            if (user) {
+                setUser(user);
+            } else {
+                setUser(null);
+            }
             setLoading(false);
         });
         return () => unsubscribe();
@@ -98,7 +100,7 @@ function App() {
     }
 }
 
-// --- Render the App (Stays the same) ---
+// --- Render the App ---
 const container = document.getElementById('root');
 const root = ReactDOM.createRoot(container);
 root.render(React.createElement(App));
